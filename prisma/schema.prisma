@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  shortDesc   String?
+  sku         String      @unique
+  price       Float
+  currency    String      @default("USD")
+  stock       Int         @default(0)
+  imageUrls   String // JSON array of image URLs
+  specifications String? // JSON object for technical specs
+  documents   String? // JSON array of document URLs
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  company   String?
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  status          String      @default("pending") // pending, confirmed, shipped, delivered, cancelled
+  totalAmount     Float
+  currency        String      @default("USD")
+  shippingAddress String // JSON object
+  billingAddress  String? // JSON object
+  orderItems      OrderItem[]
+  payments        Payment[]
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  totalPrice Float
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id])
+  stripePaymentId String?  @unique
+  amount          Float
+  currency        String   @default("USD")
+  status          String // pending, succeeded, failed, cancelled
+  paymentMethod   String? // card, bank_transfer, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
