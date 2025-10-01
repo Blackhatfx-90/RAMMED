@@ -14,9 +14,16 @@ export async function POST(request: NextRequest) {
     // First, try to search for relevant products in the database
     const searchTerms = message.toLowerCase().split(' ').filter((term: string) => term.length > 2);
     
-    let products: any[] = [];
+    let products: Array<{
+      id: string;
+      name: string;
+      price: number;
+      shortDesc: string | null;
+      category: string;
+      imageUrls: string[];
+    }> = [];
     if (searchTerms.length > 0) {
-      products = await prisma.product.findMany({
+      const dbProducts = await prisma.product.findMany({
         where: {
           OR: [
             {
@@ -34,10 +41,10 @@ export async function POST(request: NextRequest) {
                 contains: searchTerms.join(' ')
               }
             },
-            ...searchTerms.map(term => ({
+            ...searchTerms.map((term: string) => ({
               name: { contains: term }
             })),
-            ...searchTerms.map(term => ({
+            ...searchTerms.map((term: string) => ({
               description: { contains: term }
             }))
           ],
@@ -53,6 +60,16 @@ export async function POST(request: NextRequest) {
         },
         take: 5
       });
+
+      // Map the database results to our expected type
+      products = dbProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        shortDesc: p.shortDesc,
+        category: p.category.name,
+        imageUrls: p.imageUrls ? JSON.parse(p.imageUrls) : []
+      }));
     }
 
     // Try OpenAI API if available
@@ -123,7 +140,7 @@ export async function POST(request: NextRequest) {
     if (products.length > 0) {
       response += '\n\nHere are some relevant products from our catalog:\n';
       products.forEach((product, index) => {
-        response += `\n${index + 1}. ${product.name} - ₹${product.price.toLocaleString()} (${product.category.name})`;
+        response += `\n${index + 1}. ${product.name} - ₹${product.price.toLocaleString()} (${product.category})`;
         if (product.shortDesc) {
           response += `\n   ${product.shortDesc}`;
         }
@@ -133,14 +150,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       response,
-      products: products.length > 0 ? products.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        shortDesc: p.shortDesc,
-        category: p.category.name,
-        imageUrls: p.imageUrls ? JSON.parse(p.imageUrls) : []
-      })) : []
+      products
     });
   } catch (error) {
     console.error('Chat API error:', error);

@@ -1,0 +1,10 @@
+[build]
+  publish = ".next"
+  command = "npm run build:netlify"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_ENV = "production"
+  NEXT_TELEMETRY_DISABLED = "1"
