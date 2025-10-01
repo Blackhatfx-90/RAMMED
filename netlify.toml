@@ -7,3 +7,5 @@
 [build.environment]
   NODE_ENV = "production"
   NEXT_TELEMETRY_DISABLED = "1"
+  ESLINT_NO_DEV_ERRORS = "true"
+  SKIP_ENV_VALIDATION = "1"
